@@ -33,12 +33,10 @@ library(lattice)
 R.Version() 
 ```
 
-
 #Read in data
 ```{r}
 sample <- read_excel("SPSS Input.xlsx")
 ```
-
 
 rm(list=ls())
 
@@ -55,7 +53,6 @@ T1 <- table1(sample, Age , Education , Sex , RaceEthnicity, Vol_pmERC, Vol_alERC
 write.csv(T1, "T1_April2023.csv") 
 
 ```
-
 
 #correlations and scatter plots
 ```{r}
@@ -89,21 +86,6 @@ ggsave(
   path = "C:/Users/Jet/Dropbox/Manuscripts and Publications/1. In prep/2. First-authored/2023 Lok-Kin semantic fluency hippocampus")
 
 ```
-
-#startoriginal
-get_summary <- function(model) {
-  coef_df <- data.frame(summary(model, standardize = TRUE)$coefficients[, c("Estimate", "Std. Error", "Pr(>|t|)")])
-  coef_df$Variable <- rownames(coef_df)
-  coef_df$Std.Estimate <- (lm.beta(model)$standardized.coefficients)
-  conf_int <- confint(model, level = 0.95)
-  coef_df$CI_low <- conf_int[, "2.5 %"]
-  coef_df$CI_high <- conf_int[, "97.5 %"]
-  coef_df$p_value <- coef(summary(model, standardize = TRUE))[, "Pr(>|t|)"]
- # coef_df <- select(coef_df, Variable, Estimate, "Std..Error", "Std.Estimate.lm.beta.model..standardized.coefficients", CI_low, CI_high, p_value)
-  coef_df
-}
-#endoriginal
-
 
 #Regression analyses
 ```{r}
@@ -160,7 +142,7 @@ saveWorkbook(wb, file = "Results.xlsx", overwrite = TRUE)
 ```
 
 
-#Regressing out lexical frequency from orthographic lenght
+#Regressing out lexical frequency from orthographic length
 ```{r}
 model_residualized <- lm(SF_MeanWordLength ~ Vol_alERC + Vol_pmERC + ASHS_CA1 + ASHS_CA2 + ASHS_DG + ASHS_CA3 + ASHS_Sub + ASHS_A35 + ASHS_A36 + ASHS_PhC + Age + Education + Sex + SF_MeanLF,
             data = sample, 

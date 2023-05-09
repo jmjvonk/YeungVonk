@@ -1,0 +1,243 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(haven) #read in spss
+library(readxl) #read in excel
+library(ggplot2) #plots
+library(dplyr) #filter
+library(xlsx)
+library(furniture) #table1
+library(GGally) #scatterplots
+library(ggpubr)
+library(MplusAutomation)
+library(scales) #reduce number decimals on axes
+library(openxlsx)
+library(lm.beta) #standardized estimates
+
+#line plots
+library(readxl)
+library(sjlabelled)
+
+#figures
+library(tidyr)
+library(RColorBrewer)
+library(car)
+library(directlabels)
+library(lattice)
+```
+
+```{r}
+R.Version() 
+```
+
+
+#Read in data
+```{r}
+sample <- read_excel("SPSS Input.xlsx")
+```
+
+
+rm(list=ls())
+
+#Define factors and labels
+```{r}
+sample$Sex <- as.factor(sample$Gender)
+sample$RaceEthnicity <- as.factor(sample$RaceEthnicity)
+```
+
+#Furniture Table1
+```{r}
+T1 <- table1(sample, Age , Education , Sex , RaceEthnicity, Vol_pmERC, Vol_alERC, SF_Animals, SF_MeanLF, SF_MeanAoA, SF_MeanSND, SF_MeanLexRT, SF_MeanWordLength, SF_MeanPhonologicalLength, SF_MeanPhonologicalNeighbors, SF_Switches, SF_ClusterLength, splitby = "Sex", test=T, na.rm = F, total=T, type= "condense", FUN = function(x) paste0(round(mean(x), digits=2), " (", round(sd(x), digits=1),", ",paste0(round(min(x, na.rm=TRUE), digits=1), "-", round(max(x, na.rm=TRUE), digits=1)),     ")"     ) )
+
+write.csv(T1, "T1_April2023.csv") 
+
+```
+
+
+#correlations and scatter plots
+```{r}
+
+names(sample)[names(sample) == 'SF_Animals'] <- "Total number"
+names(sample)[names(sample) == 'SF_MeanLF'] <- "Lex Freq"
+names(sample)[names(sample) == 'SF_MeanAoA'] <- "Age of Acq"
+names(sample)[names(sample) == 'SF_MeanSND'] <- "Sem Neigh"
+names(sample)[names(sample) == 'SF_MeanLexRT'] <- "Lex Dec RT"
+names(sample)[names(sample) == 'SF_MeanWordLength'] <- "Orth Length"
+names(sample)[names(sample) == 'SF_MeanPhonologicalLength'] <- "Phon Length"
+names(sample)[names(sample) == 'SF_MeanPhonologicalNeighbors'] <- "Phon Neigh"
+names(sample)[names(sample) == 'SF_Switches'] <- "Switches"
+names(sample)[names(sample) == 'SF_ClusterLength'] <- "Clusters"
+names(sample)[names(sample) == 'Age'] <- "Age"
+
+subsetsample <- sample[c(26, 29, 31, 33, 34, 35, 36, 37, 38, 39, 2)]
+
+ggpairs(subsetsample, upper = list(continuous = wrap('cor', size = 7)) ) +
+ theme_bw(base_size = 20) +
+  scale_x_continuous(n.breaks=4)
+  
+  #scale_x_continuous(labels = label_number(accuracy = .1)) +
+  #scale_y_continuous(labels = label_number(accuracy = 0.1))
+  
+ggsave(
+  "ScatterplotsApril2023.tiff",
+  height = 18,
+  width = 18,
+  dpi = 300,
+  path = "C:/Users/Jet/Dropbox/Manuscripts and Publications/1. In prep/2. First-authored/2023 Lok-Kin semantic fluency hippocampus")
+
+```
+
+#startoriginal
+get_summary <- function(model) {
+  coef_df <- data.frame(summary(model, standardize = TRUE)$coefficients[, c("Estimate", "Std. Error", "Pr(>|t|)")])
+  coef_df$Variable <- rownames(coef_df)
+  coef_df$Std.Estimate <- (lm.beta(model)$standardized.coefficients)
+  conf_int <- confint(model, level = 0.95)
+  coef_df$CI_low <- conf_int[, "2.5 %"]
+  coef_df$CI_high <- conf_int[, "97.5 %"]
+  coef_df$p_value <- coef(summary(model, standardize = TRUE))[, "Pr(>|t|)"]
+ # coef_df <- select(coef_df, Variable, Estimate, "Std..Error", "Std.Estimate.lm.beta.model..standardized.coefficients", CI_low, CI_high, p_value)
+  coef_df
+}
+#endoriginal
+
+
+#Regression analyses
+```{r}
+#model <- lm(SF_Animals ~ Vol_alERC + Vol_pmERC + ASHS_CA1 + ASHS_CA2 + ASHS_DG + ASHS_CA3 + ASHS_Sub + #ASHS_A35 + ASHS_A36 + ASHS_PhC + Age + Education + Sex, 
+#            data = sample, 
+#            na.action = na.exclude)
+
+#summary(model)  # displays the regression results
+
+
+sample2 <- select(sample, "Vol_alERC", "Vol_pmERC", "ASHS_CA1", "ASHS_CA2", "ASHS_DG", "ASHS_CA3", "ASHS_Sub", "ASHS_A35", "ASHS_A36", "ASHS_PhC", "Age", "Education", "Sex", "SF_Animals", "SF_MeanLF", "SF_MeanAoA", "SF_MeanSND", "SF_MeanLexRT", "SF_MeanWordLength", "SF_MeanPhonologicalLength", "SF_MeanPhonologicalNeighbors", "SF_Switches", "SF_ClusterLength")
+
+
+
+get_summary <- function(model) {
+  coef_df <- data.frame(summary(model, standardize = TRUE)$coefficients[, c("Estimate", "Std. Error", "Pr(>|t|)")])
+  coef_df$Variable <- rownames(coef_df)
+  coef_df$Std.Estimate <- (lm.beta(model)$standardized.coefficients)
+  coef_df$Std..Error.Std <- coef_df$Std..Error * (coef_df$Std.Estimate/coef_df$Estimate)
+  coef_df$CI_low <- coef_df$Std.Estimate - (qnorm(0.975) * coef_df$Std..Error.Std)
+  coef_df$CI_high <- coef_df$Std.Estimate + (qnorm(0.975) * coef_df$Std..Error.Std)
+  coef_df$p_value <- coef(summary(model, standardize = TRUE))[, "Pr(>|t|)"]
+ # coef_df <- select(coef_df, Variable, Estimate, "Std..Error", "Std.Estimate.lm.beta.model..standardized.coefficients", CI_low, CI_high, p_value)
+  coef_df
+}
+ 
+
+# Create an empty workbook
+wb <- createWorkbook()
+
+#loop for regression models of all SF metrics
+for(i in 14:ncol(sample2)) {
+  var_name <- colnames(sample2)[i]
+  message(paste0("Model for variable: ", var_name))
+  model <- lm(paste0(var_name, " ~ Vol_alERC + Vol_pmERC + ASHS_CA1 + ASHS_CA2 + ASHS_DG + ASHS_CA3 + ASHS_Sub + ASHS_A35 + ASHS_A36 + ASHS_PhC + Age + Education + Sex"), 
+            data = sample, 
+            na.action = na.exclude)
+  print(summary(model))
+  
+  # Get the summary statistics as a data frame and round to 3 decimals
+  summary_df <- get_summary(model)
+  summary_df[, sapply(summary_df, is.numeric)] <- round(summary_df[, sapply(summary_df, is.numeric)], 3)
+  
+  # Add a new worksheet to the workbook
+  addWorksheet(wb, sheetName = colnames(sample2)[i])
+  
+  # Write the data frame to the worksheet
+  writeData(wb, sheet = colnames(sample2)[i], x = summary_df, startCol = 1, startRow = 1)
+}
+
+# Save the workbook to an Excel file
+saveWorkbook(wb, file = "Results.xlsx", overwrite = TRUE)
+
+```
+
+
+#Regressing out lexical frequency from orthographic lenght
+```{r}
+model_residualized <- lm(SF_MeanWordLength ~ Vol_alERC + Vol_pmERC + ASHS_CA1 + ASHS_CA2 + ASHS_DG + ASHS_CA3 + ASHS_Sub + ASHS_A35 + ASHS_A36 + ASHS_PhC + Age + Education + Sex + SF_MeanLF,
+            data = sample, 
+            na.action = na.exclude)
+
+
+# summary(model_residualized)  # displays the regression results
+
+# Get the summary statistics as a data frame and round to 3 decimals
+  summary_df <- get_summary(model_residualized)
+  summary_df[, sapply(summary_df, is.numeric)] <- round(summary_df[, sapply(summary_df, is.numeric)], 3)
+  
+  print(summary_df)
+  write.csv(summary_df, "Results_residualized.csv") 
+
+```
+
+#Moderation analyses AGE
+```{r}
+sample3 <- select(sample, "Vol_alERC", "Vol_pmERC", "ASHS_CA1", "ASHS_CA2", "ASHS_DG", "ASHS_CA3", "ASHS_Sub", "ASHS_A35", "ASHS_A36", "ASHS_PhC", "Age", "Education", "Sex", "SF_Animals", "SF_MeanLF", "SF_MeanAoA")
+
+# Create an empty workbook
+wb2 <- createWorkbook()
+
+#loop for regression models of all SF metrics for interaction with age
+for(i in 14:ncol(sample3)) {
+  var_name <- colnames(sample3)[i]
+  message(paste0("Model for variable: ", var_name))
+  model <- lm(paste0(var_name, " ~ Vol_alERC*Age + Vol_pmERC + ASHS_CA1 + ASHS_CA2 + ASHS_DG + ASHS_CA3 + ASHS_Sub + ASHS_A35 + ASHS_A36 + ASHS_PhC + Age + Education + Sex"), 
+            data = sample, 
+            na.action = na.exclude)
+  print(summary(model))
+  
+  # Get the summary statistics as a data frame and round to 3 decimals
+  summary_df <- get_summary(model)
+  summary_df[, sapply(summary_df, is.numeric)] <- round(summary_df[, sapply(summary_df, is.numeric)], 3)
+  
+  # Add a new worksheet to the workbook
+  addWorksheet(wb2, sheetName = colnames(sample3)[i])
+  
+  # Write the data frame to the worksheet
+  writeData(wb2, sheet = colnames(sample3)[i], x = summary_df, startCol = 1, startRow = 1)
+}
+
+# Save the workbook to an Excel file
+saveWorkbook(wb2, file = "Results_moderationage.xlsx", overwrite = TRUE)
+
+```
+
+#Moderation analyses SEX/GENDER
+```{r}
+# Create an empty workbook
+wb3 <- createWorkbook()
+
+#loop for regression models of all SF metrics for interaction with age
+for(i in 14:ncol(sample3)) {
+  var_name <- colnames(sample3)[i]
+  message(paste0("Model for variable: ", var_name))
+  model <- lm(paste0(var_name, " ~ Vol_alERC*Sex + Vol_pmERC + ASHS_CA1 + ASHS_CA2 + ASHS_DG + ASHS_CA3 + ASHS_Sub + ASHS_A35 + ASHS_A36 + ASHS_PhC + Age + Education + Sex"), 
+            data = sample, 
+            na.action = na.exclude)
+  print(summary(model))
+  
+  # Get the summary statistics as a data frame and round to 3 decimals
+  summary_df <- get_summary(model)
+  summary_df[, sapply(summary_df, is.numeric)] <- round(summary_df[, sapply(summary_df, is.numeric)], 3)
+  
+  # Add a new worksheet to the workbook
+  addWorksheet(wb3, sheetName = colnames(sample3)[i])
+  
+  # Write the data frame to the worksheet
+  writeData(wb3, sheet = colnames(sample3)[i], x = summary_df, startCol = 1, startRow = 1)
+}
+
+# Save the workbook to an Excel file
+saveWorkbook(wb3, file = "Results_moderationsex.xlsx", overwrite = TRUE)
+
+```
+
+
